@@ -18,7 +18,7 @@
       FitScout
     </h1>
     <p class="text-slate-400 mt-3 text-base sm:text-lg">
-      Upload any outfit photo to scout garments and discover budget-friendly matching alternatives.
+      Upload any outfit photo, tag the garment, and discover budget-friendly matching alternatives instantly.
     </p>
   </header>
 
@@ -50,14 +50,27 @@
       </div>
 
       <!-- Preview Container -->
-      <div id="previewContainer" class="hidden flex flex-col items-center gap-4">
+      <div id="previewContainer" class="hidden flex flex-col items-center gap-5 w-full max-w-md mx-auto">
         <img id="imagePreview" class="max-h-80 rounded-xl object-contain shadow-md border border-slate-700/80 bg-slate-950/50 p-1" src="" alt="Uploaded Outfit Preview" />
         
-        <div class="flex items-center gap-3">
-          <button id="resetBtn" type="button" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm border border-slate-700">
-            <i class="fa-solid fa-rotate-left"></i> Change Photo
+        <!-- Smart Tagging Input -->
+        <div class="w-full text-left space-y-2" id="taggingSection">
+          <label for="itemTag" class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-tag text-indigo-400"></i> What are we scouting for?
+          </label>
+          <input 
+            type="text" 
+            id="itemTag" 
+            placeholder="e.g., Vintage Carhartt Jacket, Retro Sneakers..." 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+          />
+        </div>
+
+        <div class="flex items-center gap-3 w-full justify-center pt-2">
+          <button id="resetBtn" type="button" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-4 py-3 rounded-xl shadow transition flex items-center gap-2 text-sm border border-slate-700">
+            <i class="fa-solid fa-rotate-left"></i> Change
           </button>
-          <button id="analyzeBtn" type="button" class="bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-90 text-white font-bold px-8 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 text-sm shadow-indigo-500/20">
+          <button id="analyzeBtn" type="button" class="flex-1 bg-gradient-to-r from-indigo-500 to-pink-500 hover:opacity-90 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm shadow-indigo-500/20">
             <i class="fa-solid fa-binoculars"></i> Scout Matches
           </button>
         </div>
@@ -67,7 +80,7 @@
     <!-- Loading State -->
     <div id="loadingState" class="hidden text-center py-12 space-y-4" aria-live="polite">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
-      <p class="text-slate-300 font-medium">Scanning outfit garments & scouting exact alternatives with AI...</p>
+      <p class="text-slate-300 font-medium">Scouting exact alternatives across marketplaces...</p>
     </div>
 
     <!-- Error Banner -->
@@ -82,7 +95,7 @@
     <!-- Results Section -->
     <section id="resultsSection" class="hidden space-y-6" aria-live="polite">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h2 class="text-2xl font-bold text-slate-100">AI-Detected Outfit Breakdown</h2>
+        <h2 class="text-2xl font-bold text-slate-100">Scouted Alternatives</h2>
         <span class="text-xs bg-emerald-500/10 text-emerald-400 font-semibold px-3 py-1 rounded-full border border-emerald-500/30">
           <i class="fa-solid fa-check-double mr-1"></i> Matches Found
         </span>
@@ -108,10 +121,10 @@
     const resultsGrid = document.getElementById('resultsGrid');
     const errorBanner = document.getElementById('errorBanner');
     const errorMessage = document.getElementById('errorMessage');
-
-    let isDemoImage = false;
+    const itemTagInput = document.getElementById('itemTag');
 
     dropZone.addEventListener('click', (e) => {
+      // Prevent triggering file input if clicking on buttons or inputs
       if (e.target.closest('#previewContainer') || e.target.closest('#demoBtn')) return;
       fileInput.click();
     });
@@ -140,12 +153,12 @@
       if (file) handleFile(file);
     });
 
-    // Handle Demo / Sample Outfit Click (Matches the yellow jacket / chic style photo exactly)
+    // Handle Demo / Sample Outfit Click 
     demoBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       hideError();
-      isDemoImage = true;
       imagePreview.src = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop";
+      itemTagInput.value = "Yellow Statement Blazer"; // Auto-fill for the demo
       uploadPrompt.classList.add('hidden');
       previewContainer.classList.remove('hidden');
       resultsSection.classList.add('hidden');
@@ -195,9 +208,9 @@
       }
       try {
         hideError();
-        isDemoImage = false; // Custom uploaded file
         const compressedBase64 = await compressImage(file);
         imagePreview.src = compressedBase64;
+        itemTagInput.value = ""; // Clear input for custom uploads
         uploadPrompt.classList.add('hidden');
         previewContainer.classList.remove('hidden');
         resultsSection.classList.add('hidden');
@@ -210,7 +223,7 @@
       e.stopPropagation();
       fileInput.value = '';
       imagePreview.src = '';
-      isDemoImage = false;
+      itemTagInput.value = '';
       previewContainer.classList.add('hidden');
       uploadPrompt.classList.remove('hidden');
       resultsSection.classList.add('hidden');
@@ -228,82 +241,33 @@
 
     analyzeBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      hideError();
+      
+      const userTag = itemTagInput.value.trim() || "vintage clothing"; // Fallback if they leave it empty
 
+      hideError();
       previewContainer.classList.add('hidden');
       loadingState.classList.remove('hidden');
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simulate a quick processing delay
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
-      let itemsToDisplay = [];
-
-      if (isDemoImage) {
-        // Exact matching items tailored specifically for the sample image (Yellow Statement Jacket look)
-        itemsToDisplay = [
-          {
-            category: "Outerwear",
-            item: "Bright Yellow Statement Blazer / Jacket",
-            originalEstimate: "$180 - $250",
-            suggestions: [
-              { store: "Vinted", query: "yellow blazer jacket vintage", name: "Tailored Yellow Suit Jacket", price: "€24.00" },
-              { store: "ASOS", query: "yellow structured blazer", name: "Bright Tailored Boyfriend Blazer", price: "€38.00" }
-            ]
-          },
-          {
-            category: "Bottoms",
-            item: "High-Waist Dark Tailored Trousers",
-            originalEstimate: "$90 - $140",
-            suggestions: [
-              { store: "Vinted", query: "black high waist trousers", name: "Classic Straight Leg Pants", price: "€14.50" },
-              { store: "H&M", query: "tailored trousers black", name: "Ankle-Length Suit Trousers", price: "€24.99" }
-            ]
-          },
-          {
-            category: "Footwear",
-            item: "Chic Minimalist Boots or Heels",
-            originalEstimate: "$120 - $190",
-            suggestions: [
-              { store: "Vinted", query: "black leather ankle boots", name: "Classic Block Heel Booties", price: "€19.00" },
-              { store: "ASOS", query: "black pointed boots", name: "Minimalist Heeled Boot", price: "€35.00" }
-            ]
-          }
-        ];
-      } else {
-        // Dynamic baseline items for any user-uploaded photo
-        itemsToDisplay = [
-          {
-            category: "Top / Upper Layer",
-            item: "Identified Upper Garment Match",
-            originalEstimate: "$70 - $130",
-            suggestions: [
-              { store: "Vinted", query: "casual designer top streetwear", name: "Pre-Loved Alternative", price: "€15.00" },
-              { store: "ASOS", query: "similar style top", name: "Affordable Retail Match", price: "€25.00" }
-            ]
-          },
-          {
-            category: "Bottoms / Lower Body",
-            item: "Identified Lower Garment Match",
-            originalEstimate: "$80 - $140",
-            suggestions: [
-              { store: "Vinted", query: "pants jeans vintage style", name: "Secondhand Apparel Alternative", price: "€18.00" },
-              { store: "H&M", query: "casual trousers", name: "Budget-Friendly Basic", price: "€29.99" }
-            ]
-          },
-          {
-            category: "Footwear & Accessories",
-            item: "Complementary Match",
-            originalEstimate: "$90 - $160",
-            suggestions: [
-              { store: "Vinted", query: "fashion shoes sneakers boots", name: "Pre-Owned Footwear", price: "€22.00" },
-              { store: "ASOS", query: "casual footwear", name: "Similar Style Alternative", price: "€34.00" }
-            ]
-          }
-        ];
-      }
+      // Generate dynamic results based exactly on what the user typed
+      const dynamicItems = [
+        {
+          category: "Best Match",
+          item: userTag,
+          originalEstimate: "Retail Pricing",
+          suggestions: [
+            { store: "Vinted", query: userTag, name: "Search Pre-Loved", price: "Lowest" },
+            { store: "ASOS", query: userTag, name: "Search Retail", price: "New" },
+            { store: "H&M", query: userTag, name: "Search Basics", price: "Budget" }
+          ]
+        }
+      ];
 
       loadingState.classList.add('hidden');
       previewContainer.classList.remove('hidden');
-      displayResults(itemsToDisplay);
+      displayResults(dynamicItems);
     });
 
     function getStoreUrl(store, query) {
@@ -313,8 +277,6 @@
           return `https://www.vinted.com/catalog?search_text=${encoded}`;
         case 'asos':
           return `https://www.asos.com/search/?q=${encoded}`;
-        case 'uniqlo':
-          return `https://www.uniqlo.com/us/en/search/?q=${encoded}`;
         case 'h&m':
           return `https://www2.hm.com/en_us/search-results.html?q=${encoded}`;
         default:
@@ -324,32 +286,30 @@
 
     function displayResults(items) {
       resultsGrid.innerHTML = items.map(item => `
-        <div class="bg-slate-900 rounded-xl p-5 border border-slate-800 shadow-lg flex flex-col justify-between space-y-4 hover:border-slate-700 transition">
+        <div class="bg-slate-900 rounded-xl p-5 border border-slate-800 shadow-lg flex flex-col justify-between space-y-4 hover:border-slate-700 transition w-full col-span-1 md:col-span-2 lg:col-span-3">
           <div>
             <span class="text-xs font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-950/80 px-2.5 py-1 rounded-md border border-indigo-800/40">${item.category}</span>
-            <h3 class="text-lg font-bold text-slate-100 mt-2">${item.item}</h3>
-            <p class="text-xs text-slate-400 mt-1">Est. Original Price: <span class="line-through text-slate-500">${item.originalEstimate}</span></p>
+            <h3 class="text-xl font-bold text-slate-100 mt-2 capitalize">${item.item}</h3>
           </div>
 
           <div class="space-y-3 pt-3 border-t border-slate-800">
-            <p class="text-xs font-bold text-pink-400 uppercase tracking-wide">Scouted Alternatives:</p>
-            ${item.suggestions.map(s => {
-              const url = getStoreUrl(s.store, s.query);
-              return `
-                <div class="bg-slate-950 p-3 rounded-lg flex items-center justify-between border border-slate-800/60 hover:border-slate-700 transition">
-                  <div>
-                    <p class="text-xs text-slate-400 font-medium">${s.store}</p>
-                    <p class="text-sm font-semibold text-slate-200">${s.name}</p>
-                  </div>
-                  <div class="text-right">
-                    <span class="text-sm font-bold text-emerald-400">${s.price}</span>
-                    <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-xs text-indigo-400 hover:underline flex items-center justify-end gap-1 mt-0.5">
-                      View Deal <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                    </a>
-                  </div>
-                </div>
-              `;
-            }).join('')}
+            <p class="text-xs font-bold text-pink-400 uppercase tracking-wide">Select a marketplace to view matches:</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              ${item.suggestions.map(s => {
+                const url = getStoreUrl(s.store, s.query);
+                return `
+                  <a href="${url}" target="_blank" rel="noopener noreferrer" class="block bg-slate-950 p-4 rounded-lg border border-slate-800/60 hover:border-indigo-500/50 hover:bg-slate-900 transition group">
+                    <div class="flex justify-between items-center">
+                      <div>
+                        <p class="text-sm font-bold text-slate-200 group-hover:text-indigo-300 transition">${s.store}</p>
+                        <p class="text-xs text-slate-400">${s.name}</p>
+                      </div>
+                      <i class="fa-solid fa-arrow-up-right-from-square text-indigo-500/70 group-hover:text-indigo-400"></i>
+                    </div>
+                  </a>
+                `;
+              }).join('')}
+            </div>
           </div>
         </div>
       `).join('');
