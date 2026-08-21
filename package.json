@@ -1,0 +1,9 @@
+{
+  "name": "fitscout",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered affordable outfit finder",
+  "scripts": {
+    "start": "node backend/server.js"
+  }
+}
