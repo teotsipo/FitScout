@@ -1,1 +1,0 @@
-FitScout frontend
