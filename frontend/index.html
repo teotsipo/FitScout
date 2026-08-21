@@ -15,7 +15,7 @@
     <p class="text-slate-400 mt-3 text-base sm:text-lg">Upload any outfit photo and discover budget-friendly matching alternatives.</p>
   </header>
 
-  <main class="w-full max-w-4xl space-y-6 z-10">
+  <main class="w-full max-w-5xl space-y-6 z-10">
     <div id="dropZone" class="bg-slate-900/80 border-2 border-dashed border-indigo-500/40 rounded-2xl p-6 text-center hover:border-indigo-400 transition-all cursor-pointer shadow-xl backdrop-blur-md relative group">
       <input type="file" id="fileInput" accept="image/*" class="hidden" />
       <div id="uploadPrompt" class="space-y-4 py-6">
@@ -55,8 +55,8 @@
 
     <section id="resultsSection" class="hidden space-y-6" aria-live="polite">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <h2 id="resultsTitle" class="text-2xl font-bold text-slate-100">Outfit Analysis</h2>
-        <span id="connectionBadge" class="text-xs bg-emerald-500/10 text-emerald-400 font-semibold px-3 py-1 rounded-full border border-emerald-500/30"><i class="fa-solid fa-check-double mr-1"></i> Connected</span>
+        <h2 class="text-2xl font-bold text-slate-100">Outfit Analysis</h2>
+        <span class="text-xs bg-emerald-500/10 text-emerald-400 font-semibold px-3 py-1 rounded-full border border-emerald-500/30"><i class="fa-solid fa-check-double mr-1"></i> Connected</span>
       </div>
       <div id="resultsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
     </section>
@@ -84,142 +84,103 @@
       if (e.target.closest('#previewContainer') || e.target.closest('#demoBtn')) return;
       fileInput.click();
     });
-
-    fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length) handleFile(e.target.files[0]);
-    });
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-      dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
-    });
+    fileInput.addEventListener('change', (e) => { if (e.target.files.length) handleFile(e.target.files[0]); });
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false));
     ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.add('border-indigo-400', 'bg-slate-900')));
     ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.remove('border-indigo-400', 'bg-slate-900')));
     dropZone.addEventListener('drop', e => { const file = e.dataTransfer?.files[0]; if (file) handleFile(file); });
 
     demoBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      hideError();
-      selectedFile = null;
+      e.stopPropagation(); hideError(); selectedFile = null;
       imagePreview.src = 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop';
       itemTagInput.value = 'Yellow Statement Blazer';
-      uploadPrompt.classList.add('hidden');
-      previewContainer.classList.remove('hidden');
-      resultsSection.classList.add('hidden');
+      uploadPrompt.classList.add('hidden'); previewContainer.classList.remove('hidden'); resultsSection.classList.add('hidden');
     });
 
     function handleFile(file) {
-      if (!file.type.startsWith('image/')) {
-        showError('Please select a valid image file format (JPEG, PNG, WebP).');
-        return;
-      }
-      hideError();
-      selectedFile = file;
-      imagePreview.src = URL.createObjectURL(file);
-      itemTagInput.value = '';
-      uploadPrompt.classList.add('hidden');
-      previewContainer.classList.remove('hidden');
-      resultsSection.classList.add('hidden');
+      if (!file.type.startsWith('image/')) { showError('Please select a valid image file format (JPEG, PNG, WebP).'); return; }
+      hideError(); selectedFile = file; imagePreview.src = URL.createObjectURL(file); itemTagInput.value = '';
+      uploadPrompt.classList.add('hidden'); previewContainer.classList.remove('hidden'); resultsSection.classList.add('hidden');
     }
 
     resetBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      fileInput.value = '';
-      selectedFile = null;
-      imagePreview.src = '';
-      itemTagInput.value = '';
-      previewContainer.classList.add('hidden');
-      uploadPrompt.classList.remove('hidden');
-      resultsSection.classList.add('hidden');
-      hideError();
+      e.stopPropagation(); fileInput.value = ''; selectedFile = null; imagePreview.src = ''; itemTagInput.value = '';
+      previewContainer.classList.add('hidden'); uploadPrompt.classList.remove('hidden'); resultsSection.classList.add('hidden'); hideError();
     });
-
-    function showError(msg) {
-      errorMessage.textContent = msg;
-      errorBanner.classList.remove('hidden');
-    }
+    function showError(msg) { errorMessage.textContent = msg; errorBanner.classList.remove('hidden'); }
     function hideError() { errorBanner.classList.add('hidden'); }
 
     analyzeBtn.addEventListener('click', async e => {
       e.stopPropagation();
-      if (!selectedFile) {
-        showError('Please upload an image first.');
-        return;
-      }
-
-      hideError();
-      previewContainer.classList.add('hidden');
-      loadingState.classList.remove('hidden');
-
+      if (!selectedFile) { showError('Please upload an image first.'); return; }
+      hideError(); previewContainer.classList.add('hidden'); loadingState.classList.remove('hidden');
       try {
         const base64 = await fileToBase64(selectedFile);
-        const response = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: selectedFile.name,
-            image: base64,
-            tag: itemTagInput.value.trim() || null
-          })
-        });
-
+        const response = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: selectedFile.name, image: base64, tag: itemTagInput.value.trim() || null }) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Backend request failed.');
         displayAnalysis(data);
-      } catch (err) {
-        showError(`Could not connect to the FitScout backend: ${err.message}`);
-      } finally {
-        loadingState.classList.add('hidden');
-        previewContainer.classList.remove('hidden');
-      }
+      } catch (err) { showError(`Could not connect to the FitScout backend: ${err.message}`); }
+      finally { loadingState.classList.add('hidden'); previewContainer.classList.remove('hidden'); }
     });
 
     function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+    }
+
+    function demoProductsFor(item) {
+      const products = {
+        top: [
+          { name: 'Basic Cotton T-Shirt', store: 'Demo Store', price: 14.99, url: '#', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=500&auto=format&fit=crop' },
+          { name: 'Classic Regular T-Shirt', store: 'Demo Store', price: 19.99, url: '#', image: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?q=80&w=500&auto=format&fit=crop' }
+        ],
+        bottom: [
+          { name: 'Straight Fit Denim Jeans', store: 'Demo Store', price: 29.99, url: '#', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?q=80&w=500&auto=format&fit=crop' },
+          { name: 'Classic Straight Trousers', store: 'Demo Store', price: 34.99, url: '#', image: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?q=80&w=500&auto=format&fit=crop' }
+        ],
+        shoes: [
+          { name: 'Minimal White Sneakers', store: 'Demo Store', price: 39.99, url: '#', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=500&auto=format&fit=crop' },
+          { name: 'Everyday Low-Top Sneakers', store: 'Demo Store', price: 44.99, url: '#', image: 'https://images.unsplash.com/photo-149 sneaker-placeholder' }
+        ],
+        outerwear: [
+          { name: 'Relaxed Casual Jacket', store: 'Demo Store', price: 39.99, url: '#', image: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?q=80&w=500&auto=format&fit=crop' },
+          { name: 'Lightweight Everyday Jacket', store: 'Demo Store', price: 49.99, url: '#', image: 'https://images.unsplash.com/photo-1520975958225-5e3b6d8f7f7a?q=80&w=500&auto=format&fit=crop' }
+        ],
+        accessory: [
+          { name: 'Minimal Everyday Accessory', store: 'Demo Store', price: 12.99, url: '#', image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?q=80&w=500&auto=format&fit=crop' },
+          { name: 'Simple Classic Accessory', store: 'Demo Store', price: 18.99, url: '#', image: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=500&auto=format&fit=crop' }
+        ],
+        other: [
+          { name: 'Affordable Matching Item', store: 'Demo Store', price: 19.99, url: '#', image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=500&auto=format&fit=crop' }
+        ]
+      };
+      return products[item.category] || products.other;
     }
 
     function displayAnalysis(data) {
       const items = data.analysis?.items || [];
-      const icons = {
-        outerwear: 'fa-jacket',
-        top: 'fa-shirt',
-        bottom: 'fa-person',
-        shoes: 'fa-shoe-prints',
-        accessory: 'fa-gem',
-        other: 'fa-circle'
-      };
-
+      const icons = { outerwear: 'fa-shirt', top: 'fa-shirt', bottom: 'fa-person', shoes: 'fa-shoe-prints', accessory: 'fa-gem', other: 'fa-circle' };
       if (!items.length) {
         resultsGrid.innerHTML = '<div class="sm:col-span-2 bg-slate-900 rounded-xl p-5 border border-slate-800 text-slate-300">No clothing items were detected.</div>';
       } else {
-        resultsGrid.innerHTML = items.map(item => `
-          <article class="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-lg">
+        resultsGrid.innerHTML = items.map((item, index) => {
+          const products = demoProductsFor(item);
+          return `<article class="sm:col-span-2 bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-lg">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-11 h-11 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                <i class="fa-solid ${icons[item.category] || icons.other}"></i>
-              </div>
-              <div>
-                <p class="text-xs uppercase tracking-wider text-indigo-400 font-bold">${escapeHtml(item.category)}</p>
-                <h3 class="text-lg font-bold text-slate-100">${escapeHtml(item.description)}</h3>
-              </div>
+              <div class="w-11 h-11 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400"><i class="fa-solid ${icons[item.category] || icons.other}"></i></div>
+              <div><p class="text-xs uppercase tracking-wider text-indigo-400 font-bold">${escapeHtml(item.category)}</p><h3 class="text-lg font-bold text-slate-100">${escapeHtml(item.description)}</h3></div>
             </div>
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div><p class="text-slate-500">Color</p><p class="text-slate-200">${escapeHtml(item.color || '—')}</p></div>
-              <div><p class="text-slate-500">Style</p><p class="text-slate-200">${escapeHtml(item.style || '—')}</p></div>
+            <div class="grid grid-cols-2 gap-3 text-sm mb-5"><div><p class="text-slate-500">Color</p><p class="text-slate-200">${escapeHtml(item.color || '—')}</p></div><div><p class="text-slate-500">Style</p><p class="text-slate-200">${escapeHtml(item.style || '—')}</p></div></div>
+            <div class="border-t border-slate-800 pt-5"><div class="flex items-center justify-between mb-3"><h4 class="font-bold text-slate-100">Affordable alternatives</h4><span class="text-xs text-slate-500">Demo products</span></div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${products.map(product => `<a href="${product.url}" onclick="return false" class="group bg-slate-950/70 border border-slate-800 rounded-xl overflow-hidden"><img src="${product.image}" alt="${escapeHtml(product.name)}" class="w-full h-40 object-cover"><div class="p-3"><p class="font-semibold text-slate-100 group-hover:text-indigo-300">${escapeHtml(product.name)}</p><div class="flex justify-between items-center mt-2"><span class="text-xs text-slate-500">${escapeHtml(product.store)}</span><span class="font-bold text-emerald-400">€${product.price.toFixed(2)}</span></div></div></a>`).join('')}</div>
             </div>
-          </article>`).join('');
+          </article>`;
+        }).join('');
       }
-
       resultsSection.classList.remove('hidden');
     }
 
-    function escapeHtml(value) {
-      return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
-    }
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>'"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char])); }
   </script>
 </body>
 </html>
