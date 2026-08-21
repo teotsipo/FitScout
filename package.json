@@ -4,6 +4,10 @@
   "private": true,
   "description": "AI-powered affordable outfit finder",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
